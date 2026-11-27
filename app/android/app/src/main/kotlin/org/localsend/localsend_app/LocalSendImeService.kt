@@ -283,8 +283,11 @@ class LocalSendImeService : InputMethodService() {
     private fun findLanIp(): String? {
         try {
             val interfaces = NetworkInterface.getNetworkInterfaces() ?: return null
-            for (intf in interfaces.asIterable()) {
-                for (addr in intf.inetAddresses.asIterable()) {
+            while (interfaces.hasMoreElements()) {
+                val intf = interfaces.nextElement()
+                val addresses = intf.inetAddresses
+                while (addresses.hasMoreElements()) {
+                    val addr = addresses.nextElement()
                     if (addr is Inet4Address && !addr.isLoopbackAddress && addr.isSiteLocalAddress) {
                         return addr.hostAddress
                     }
