@@ -438,8 +438,8 @@ class _TvKeyboardPageState extends State<TvKeyboardPage> {
         candidates.map((device) async => await KeyboardClient.probeHost(device.ip!) ? device : null),
       );
       if (!mounted || _device != null) return;
-      final devices = reachable.whereType<Device>().toList();
-      if (devices.isNotEmpty) await _connect(devices.first);
+      final reachableDevices = reachable.whereType<Device>().toList();
+      if (reachableDevices.isNotEmpty) await _connect(reachableDevices.first);
     } finally {
       _autoConnectInFlight = false;
     }
