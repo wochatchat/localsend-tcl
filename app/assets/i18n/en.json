@@ -53,7 +53,7 @@
       "on": "@:general.on"
     },
     "link": "Receive via link",
-    "qrHint": "Scan with your phone to open the TV keyboard input page"
+    "qrHint": "Scan with your phone to open the send page in the browser"
   },
   "sendTab": {
     "title": "Send",
