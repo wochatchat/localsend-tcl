@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicReference
  * Runs entirely on the Android side; the Flutter engine and the Rust transfer server
  * are not involved. Settings are read directly from FlutterSharedPreferences:
  * - flutter.ls_tv_keyboard (bool, default true): gate for the HTTP server
- * - flutter.ls_receive_pin (string?): optional PIN for /kb/* endpoints
+ * - flutter.ls_receive_pin (string?): optional PIN for the /kb/ endpoints
  */
 class LocalSendImeService : InputMethodService() {
 
