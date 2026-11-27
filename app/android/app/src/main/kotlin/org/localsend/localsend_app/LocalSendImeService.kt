@@ -3,7 +3,6 @@ package org.localsend.localsend_app
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import android.graphics.Color
@@ -152,8 +151,7 @@ class LocalSendImeService : InputMethodService() {
     // region settings
 
     fun isKeyboardEnabled(): Boolean =
-        packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) &&
-            getSharedPreferences(PREF_NAME, MODE_PRIVATE).getBoolean(PREF_KEY_ENABLED, true)
+        getSharedPreferences(PREF_NAME, MODE_PRIVATE).getBoolean(PREF_KEY_ENABLED, true)
 
     fun readPin(): String? =
         getSharedPreferences(PREF_NAME, MODE_PRIVATE)
@@ -205,7 +203,8 @@ class LocalSendImeService : InputMethodService() {
             qrView?.visibility = View.GONE
             statusView?.text = getString(R.string.ime_status_disabled)
         } else {
-            val url = buildTransferUrl()
+            val url = runCatching { buildTransferUrl() }
+                .getOrElse { buildKeyboardUrlFallback() }
             urlView?.text = url
             renderQr(url)
         }
@@ -267,6 +266,12 @@ class LocalSendImeService : InputMethodService() {
         val numberPassword = cls == InputType.TYPE_CLASS_NUMBER &&
             variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD
         return textPassword || numberPassword
+    }
+
+    private fun buildKeyboardUrlFallback(): String {
+        val base = "http://${runCatching { findLanIp() }.getOrNull() ?: "0.0.0.0"}:$KEYBOARD_PORT/kb"
+        val pin = runCatching { readPin() }.getOrNull()
+        return if (pin != null) "$base?pin=${Uri.encode(pin)}" else base
     }
 
     private fun buildTransferUrl(): String {
