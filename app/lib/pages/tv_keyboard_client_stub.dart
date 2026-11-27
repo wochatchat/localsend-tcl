@@ -8,6 +8,8 @@ class KeyboardClient {
 
   Future<Map<String, dynamic>> state() => _unsupported();
 
+  static Future<bool> probeHost(String ip) async => false;
+
   Future<Map<String, dynamic>> snapshot() => _unsupported();
 
   Future<Map<String, dynamic>> text(Map<String, dynamic> body) => _unsupported();

@@ -46,6 +46,9 @@ class _TvKeyboardPageState extends State<TvKeyboardPage> {
   String _tvText = '';
   Future<void> _writeChain = Future<void>.value();
   bool _applyingSnapshot = false;
+  bool _pinsLoaded = false;
+  bool _autoConnectScheduled = false;
+  bool _autoConnectInFlight = false;
   int _lastSelectionStart = 0;
   int _lastSelectionEnd = 0;
 
@@ -56,7 +59,13 @@ class _TvKeyboardPageState extends State<TvKeyboardPage> {
     _device = widget.initialDevice;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _loadSavedPins();
-      if (mounted && _device != null) await _connect(_device!);
+      _pinsLoaded = true;
+      if (!mounted) return;
+      if (_device != null) {
+        await _connect(_device!);
+      } else {
+        context.global.dispatchAsync(StartSmartScan());
+      }
     });
   }
 
@@ -286,6 +295,7 @@ class _TvKeyboardPageState extends State<TvKeyboardPage> {
       builder: (context, ref) {
         final nearby = ref.watch(nearbyDevicesProvider).allDevices.values.where((device) => device.ip != null).toList();
         final devices = <Device>[if (_device != null && !nearby.any((item) => item.ip == _device!.ip)) _device!, ...nearby];
+        _scheduleAutoConnect(devices);
         return _buildPage(context, devices);
       },
     );
@@ -408,6 +418,31 @@ class _TvKeyboardPageState extends State<TvKeyboardPage> {
       _KeyboardStatus.connected => t.tvKeyboardPage.statusConnected,
       _KeyboardStatus.disconnected => t.tvKeyboardPage.statusDisconnected,
     };
+  }
+
+  void _scheduleAutoConnect(List<Device> devices) {
+    if (!_pinsLoaded || widget.initialDevice != null || _device != null || _autoConnectScheduled || _autoConnectInFlight) return;
+    _autoConnectScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoConnectScheduled = false;
+      if (mounted) unawaited(_autoConnect(devices));
+    });
+  }
+
+  Future<void> _autoConnect(List<Device> devices) async {
+    if (_autoConnectInFlight || _device != null || _status == _KeyboardStatus.connected) return;
+    _autoConnectInFlight = true;
+    try {
+      final candidates = devices.where((device) => device.ip != null).toList();
+      final reachable = await Future.wait(
+        candidates.map((device) async => await KeyboardClient.probeHost(device.ip!) ? device : null),
+      );
+      if (!mounted || _device != null) return;
+      final devices = reachable.whereType<Device>().toList();
+      if (devices.isNotEmpty) await _connect(devices.first);
+    } finally {
+      _autoConnectInFlight = false;
+    }
   }
 
   void _rescan() {

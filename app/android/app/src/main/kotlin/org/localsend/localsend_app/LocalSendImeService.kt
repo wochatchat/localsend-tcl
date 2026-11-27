@@ -108,6 +108,8 @@ class LocalSendImeService : InputMethodService() {
         startServerIfNeeded()
     }
 
+    override fun onEvaluateFullscreenMode(): Boolean = false
+
     override fun onDestroy() {
         httpServer?.stop()
         httpServer = null
@@ -117,6 +119,12 @@ class LocalSendImeService : InputMethodService() {
 
     fun trustKeyboardClient(ip: String) {
         httpServer?.trustClient(ip)
+    }
+
+    fun markKeyboardClient(ip: String) {
+        mainHandler.post {
+            statusView?.text = getString(R.string.ime_status_connected, ip)
+        }
     }
 
     fun refreshKeyboardEnabled() {

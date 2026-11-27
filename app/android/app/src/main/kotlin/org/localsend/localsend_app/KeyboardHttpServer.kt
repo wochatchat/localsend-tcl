@@ -50,7 +50,7 @@ class KeyboardHttpServer(
                 path == "/kb/state" -> {
                     if (!checkRateLimit(ip)) return rateLimited()
                     if (!checkPin(session)) return unauthorized()
-                    serveState()
+                    serveState(ip)
                 }
                 path == "/kb/snapshot" -> {
                     if (!checkRateLimit(ip)) return rateLimited()
@@ -89,10 +89,11 @@ class KeyboardHttpServer(
         return newFixedLengthResponse(Response.Status.OK, "text/html; charset=utf-8", String(html, Charsets.UTF_8))
     }
 
-    private fun serveState(): Response {
+    private fun serveState(ip: String): Response {
         if (!ime.isKeyboardEnabled()) {
             return json(Response.Status.OK, JSONObject().put("ok", false).put("reason", "disabled"))
         }
+        ime.markKeyboardClient(ip)
         val body = JSONObject()
             .put("ok", true)
             .put("visible", ime.editorVisible)
@@ -188,6 +189,18 @@ class KeyboardHttpServer(
     // region helpers
 
     private fun readJsonBody(session: IHTTPSession): JSONObject? {
+        // NanoHTTPD defaults a body without an explicit charset to US-ASCII.
+        // JSON sent by browsers is UTF-8 even when the browser omits charset,
+        // so normalize the header before NanoHTTPD decodes postData.
+        val headers = session.headers
+        val contentType = headers["content-type"]
+        if (contentType != null &&
+            contentType.substringBefore(';').trim().equals("application/json", ignoreCase = true) &&
+            !contentType.contains("charset=", ignoreCase = true)
+        ) {
+            headers["content-type"] = "$contentType; charset=UTF-8"
+        }
+
         val map = HashMap<String, String>()
         session.parseBody(map)
         val raw = map["postData"] ?: return null

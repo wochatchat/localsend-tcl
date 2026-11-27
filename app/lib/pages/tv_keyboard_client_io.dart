@@ -14,6 +14,22 @@ class KeyboardClient {
 
   Future<Map<String, dynamic>> state() => _request('GET', '/kb/state');
 
+  static Future<bool> probeHost(String ip) async {
+    final client = KeyboardClient()..host = ip;
+    try {
+      final result = await client.state();
+      return result['ok'] == true;
+    } on KeyboardUnauthorized {
+      // The endpoint exists; the TV has a PIN configured. The normal connect
+      // flow will either use the discovered trust window or ask for the PIN.
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      client.dispose();
+    }
+  }
+
   Future<Map<String, dynamic>> snapshot() => _request('GET', '/kb/snapshot');
 
   Future<Map<String, dynamic>> text(Map<String, dynamic> body) => _request('POST', '/kb/text', body: body);
@@ -30,7 +46,7 @@ class KeyboardClient {
     final uri = Uri.parse('http://$formattedHost:53318$path$query');
     final request = await _http.openUrl(method, uri).timeout(const Duration(seconds: 3));
     if (body != null) {
-      request.headers.contentType = ContentType.json;
+      request.headers.contentType = ContentType('application', 'json', charset: 'utf-8');
       request.write(jsonEncode(body));
     }
     final response = await request.close().timeout(const Duration(seconds: 4));
