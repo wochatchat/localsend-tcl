@@ -46,6 +46,10 @@ class LocalSendImeService : InputMethodService() {
         private const val PREF_NAME = "FlutterSharedPreferences"
         private const val PREF_KEY_ENABLED = "flutter.ls_tv_keyboard"
         private const val PREF_KEY_PIN = "flutter.ls_receive_pin"
+        private const val PREF_KEY_PORT = "flutter.ls_port"
+        private const val PREF_KEY_HTTPS = "flutter.ls_https"
+        private const val PREF_KEY_TRANSFER_URL = "flutter.ls_tv_transfer_url"
+        private const val DEFAULT_TRANSFER_PORT = 53317
         const val KEYBOARD_PORT = 53318
 
         private val ENTER_ACTIONS = setOf(
@@ -132,7 +136,7 @@ class LocalSendImeService : InputMethodService() {
             startServerIfNeeded()
             val pin = readPin()
             pinBadgeView?.visibility = if (pin != null) View.VISIBLE else View.GONE
-            val url = buildKeyboardUrl(pin)
+            val url = buildTransferUrl()
             urlView?.text = url
             renderQr(url)
             qrView?.visibility = View.VISIBLE
@@ -201,7 +205,7 @@ class LocalSendImeService : InputMethodService() {
             qrView?.visibility = View.GONE
             statusView?.text = getString(R.string.ime_status_disabled)
         } else {
-            val url = buildKeyboardUrl(pin)
+            val url = buildTransferUrl()
             urlView?.text = url
             renderQr(url)
         }
@@ -227,6 +231,12 @@ class LocalSendImeService : InputMethodService() {
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
         editorVisible = true
+        if (isKeyboardEnabled()) {
+            // This is idempotent. The IME becoming visible guarantees that the
+            // file receiver's process service is also alive; hiding the IME
+            // never stops that service.
+            KeepAliveService.startForIme(this)
+        }
         applyEditorInfo(editorInfo)
         flushPendingInjection()
     }
@@ -265,9 +275,32 @@ class LocalSendImeService : InputMethodService() {
         return textPassword || numberPassword
     }
 
-    private fun buildKeyboardUrl(pin: String?): String {
-        val base = "http://${findLanIp() ?: "0.0.0.0"}:$KEYBOARD_PORT/kb"
-        return if (pin != null) "$base?pin=${Uri.encode(pin)}" else base
+    private fun buildTransferUrl(): String {
+        val preferences = getSharedPreferences(PREF_NAME, MODE_PRIVATE)
+        val scheme = if (preferences.getBoolean(PREF_KEY_HTTPS, true)) "https" else "http"
+        val port = preferences.getInt(PREF_KEY_PORT, DEFAULT_TRANSFER_PORT)
+        val configuredPin = readPin()
+        val currentIp = findLanIp()
+        val saved = preferences.getString(PREF_KEY_TRANSFER_URL, null)?.takeIf { it.isNotBlank() }
+        if (saved != null) {
+            val savedUri = Uri.parse(saved)
+            val savedPin = savedUri.getQueryParameter("pin")
+            if (savedUri.scheme == scheme &&
+                savedUri.port == port &&
+                savedUri.host != null &&
+                savedUri.getQueryParameter("tv") == "1" &&
+                savedPin == configuredPin
+            ) {
+                return saved
+            }
+        }
+
+        val base = "$scheme://${currentIp ?: "0.0.0.0"}:$port"
+        return if (configuredPin != null) {
+            "$base/?tv=1&pin=${Uri.encode(configuredPin)}"
+        } else {
+            "$base/?tv=1"
+        }
     }
 
     private fun renderQr(content: String) {

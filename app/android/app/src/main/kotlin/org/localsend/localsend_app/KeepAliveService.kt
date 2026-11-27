@@ -127,6 +127,18 @@ class KeepAliveService : Service() {
         const val EXTRA_FROM_BOOT = "from_boot"
         const val BOOT_ACTIVITY_RETRY_MS = 8000L
         const val PROCESS_RESTART_RETRY_MS = 5000L
+
+        /**
+         * Called by the TV IME when its panel becomes available. The receiver
+         * service owns the process/network locks, so the IME must only ensure
+         * that it is started and must never stop it when the panel disappears.
+         */
+        fun startForIme(context: Context) {
+            if (isRunning) {
+                return
+            }
+            start(context)
+        }
         private const val PREF_NAME = "FlutterSharedPreferences"
         private const val PREF_KEY = "flutter.ls_keep_alive"
 

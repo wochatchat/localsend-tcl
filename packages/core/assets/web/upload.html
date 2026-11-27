@@ -27,20 +27,39 @@
             background-color: #E0F2F1;
         }
 
-        #upload-button {
-            width: 100%;
+        #actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75em;
+        }
+
+        .action-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 5em;
             padding: 1em;
             font-family: inherit;
-            font-size: 1.5em;
+            font-size: 1.2em;
             color: #FFFFFF;
             background-color: #00796B;
             border: none;
             border-radius: 0.5em;
             cursor: pointer;
+            text-decoration: none;
         }
 
-        #upload-button:hover {
+        .action-button:hover {
             background-color: #009688;
+        }
+
+        #keyboard-button {
+            display: none;
+            background-color: #455A64;
+        }
+
+        #keyboard-button:hover {
+            background-color: #546E7A;
         }
 
         #status-text {
@@ -70,7 +89,10 @@
 
 <h1 style="padding: 0.5em">LocalSend</h1>
 <div id="content">
-    <button id="upload-button" type="button">Upload</button>
+    <div id="actions">
+        <button id="upload-button" class="action-button" type="button">传输文件<br>Transfer files</button>
+        <a id="keyboard-button" class="action-button" href="/kb">电视键盘<br>TV keyboard</a>
+    </div>
     <p id="drop-hint">Place items to share.</p>
     <input id="file-input" type="file" multiple style="display: none">
     <p id="status-text"></p>
@@ -94,6 +116,16 @@
         pin = decodeURIComponent(pair[1]);
         break;
       }
+    }
+
+    // The TV QR code opens this upload page. Keep the same PIN when the user
+    // switches to the keyboard service on the other port.
+    var isTvQr = new URLSearchParams(location.search).get('tv') === '1';
+    if (isTvQr) {
+      var keyboardHost = location.hostname.indexOf(':') >= 0 ? '[' + location.hostname + ']' : location.hostname;
+      document.getElementById('keyboard-button').style.display = 'flex';
+      document.getElementById('keyboard-button').href =
+        'http://' + keyboardHost + ':53318/kb' + (pin ? '?pin=' + encodeURIComponent(pin) : '');
     }
 
     function makeRequest(url, method, body, callback) {

@@ -46,8 +46,12 @@ class KeyboardClient {
     final uri = Uri.parse('http://$formattedHost:53318$path$query');
     final request = await _http.openUrl(method, uri).timeout(const Duration(seconds: 3));
     if (body != null) {
+      final bytes = utf8.encode(jsonEncode(body));
       request.headers.contentType = ContentType('application', 'json', charset: 'utf-8');
-      request.write(jsonEncode(body));
+      // NanoHTTPD on some TV ROMs does not reliably parse chunked request
+      // bodies. Send a fixed-length UTF-8 body for every keyboard operation.
+      request.contentLength = bytes.length;
+      request.add(bytes);
     }
     final response = await request.close().timeout(const Duration(seconds: 4));
     final raw = await utf8.decoder.bind(response).join();

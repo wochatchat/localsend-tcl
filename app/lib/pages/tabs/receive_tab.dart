@@ -25,6 +25,7 @@ import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:refena_flutter/addons.dart';
 import 'package:refena_flutter/refena_flutter.dart';
 import 'package:routerino/routerino.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ReceiveTab extends StatefulWidget {
   const ReceiveTab();
@@ -242,21 +243,51 @@ class _TvDebugLineState extends State<_TvDebugLine> {
 /// the web send page without any interaction on the TV side.
 /// Next to the QR code there is an equally sized tile that opens the
 /// transfer history page (easier to reach with a remote than the corner icon).
-class _TvReceiveQr extends StatelessWidget {
+class _TvReceiveQr extends StatefulWidget {
   final ServerState serverState;
   final String ip;
 
   const _TvReceiveQr({required this.serverState, required this.ip});
 
   @override
-  Widget build(BuildContext context) {
-    final url = '${serverState.https ? 'https' : 'http'}://$ip:${serverState.port}';
-    final pin = serverState.web?.pin;
-    final urlWithPin = switch (pin) {
-      String() => '$url/?pin=${Uri.encodeQueryComponent(pin)}',
-      null => url,
-    };
+  State<_TvReceiveQr> createState() => _TvReceiveQrState();
+}
 
+class _TvReceiveQrState extends State<_TvReceiveQr> {
+  static const _transferUrlKey = 'ls_tv_transfer_url';
+
+  String get _url => '${widget.serverState.https ? 'https' : 'http'}://${widget.ip}:${widget.serverState.port}';
+
+  String get _urlWithPin {
+    final pin = widget.serverState.web?.pin;
+    final tvQuery = 'tv=1';
+    return switch (pin) {
+      String() => '$_url/?$tvQuery&pin=${Uri.encodeQueryComponent(pin)}',
+      null => '$_url/?$tvQuery',
+    };
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _saveCanonicalUrl();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TvReceiveQr oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.serverState != widget.serverState || oldWidget.ip != widget.ip) {
+      _saveCanonicalUrl();
+    }
+  }
+
+  Future<void> _saveCanonicalUrl() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_transferUrlKey, _urlWithPin);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -272,8 +303,8 @@ class _TvReceiveQr extends StatelessWidget {
                 width: 200,
                 height: 200,
                 child: PrettyQrView.data(
-                  data: urlWithPin,
-                  errorCorrectLevel: QrErrorCorrectLevel.Q,
+                  data: _urlWithPin,
+                  errorCorrectLevel: QrErrorCorrectLevel.M,
                   decoration: PrettyQrDecoration(shape: PrettyQrSmoothSymbol(roundFactor: 0, color: Colors.black)),
                 ),
               ),
@@ -283,7 +314,7 @@ class _TvReceiveQr extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        Text(url, style: const TextStyle(fontSize: 20), textAlign: TextAlign.center),
+        Text(_url, style: const TextStyle(fontSize: 20), textAlign: TextAlign.center),
       ],
     );
   }
