@@ -3,8 +3,6 @@ name: Build Android APK
 on:
   workflow_dispatch:
   workflow_call:
-  push:
-    branches: [tcl]
 
 env:
   FLUTTER_VERSION: "3.41.9"
