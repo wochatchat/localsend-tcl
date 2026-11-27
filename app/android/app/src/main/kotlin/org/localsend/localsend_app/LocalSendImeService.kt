@@ -231,12 +231,6 @@ class LocalSendImeService : InputMethodService() {
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
         editorVisible = true
-        if (isKeyboardEnabled()) {
-            // This is idempotent. The IME becoming visible guarantees that the
-            // file receiver's process service is also alive; hiding the IME
-            // never stops that service.
-            KeepAliveService.startForIme(this)
-        }
         applyEditorInfo(editorInfo)
         flushPendingInjection()
     }
