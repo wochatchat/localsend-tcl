@@ -27,16 +27,45 @@
             background-color: #E0F2F1;
         }
 
-        #actions {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.75em;
+        #topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1em;
+            padding: 0.5em 1em;
+            border-bottom: 1px solid #E0E0E0;
+        }
+
+        #topbar h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 1.5em;
+        }
+
+        #mode-nav {
+            display: flex;
+            gap: 0.5em;
+        }
+
+        .mode-link {
+            display: none;
+            padding: 0.5em 0.75em;
+            color: #455A64;
+            border-radius: 0.5em;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .mode-link.active {
+            color: #FFFFFF;
+            background-color: #00796B;
         }
 
         .action-button {
             display: flex;
             align-items: center;
             justify-content: center;
+            width: 100%;
             min-height: 5em;
             padding: 1em;
             font-family: inherit;
@@ -46,7 +75,6 @@
             border: none;
             border-radius: 0.5em;
             cursor: pointer;
-            text-decoration: none;
         }
 
         .action-button:hover {
@@ -55,11 +83,29 @@
 
         #keyboard-button {
             display: none;
+            color: #FFFFFF;
             background-color: #455A64;
         }
 
         #keyboard-button:hover {
             background-color: #546E7A;
+        }
+
+        @media (max-width: 480px) {
+            #topbar {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 0.25em;
+            }
+
+            #mode-nav {
+                width: 100%;
+            }
+
+            .mode-link {
+                flex: 1;
+                text-align: center;
+            }
         }
 
         #status-text {
@@ -87,12 +133,15 @@
     LocalSend requires JavaScript, which is currently disabled. Please enable it and try again.
 </noscript>
 
-<h1 style="padding: 0.5em">LocalSend</h1>
+<header id="topbar">
+    <h1>LocalSend</h1>
+    <nav id="mode-nav" aria-label="功能切换">
+        <a id="transfer-link" class="mode-link active" href="./">传输文件<br>Transfer files</a>
+        <a id="keyboard-button" class="mode-link" href="/kb">电视键盘<br>TV keyboard</a>
+    </nav>
+</header>
 <div id="content">
-    <div id="actions">
-        <button id="upload-button" class="action-button" type="button">传输文件<br>Transfer files</button>
-        <a id="keyboard-button" class="action-button" href="/kb">电视键盘<br>TV keyboard</a>
-    </div>
+    <button id="upload-button" class="action-button" type="button">选择文件并传输<br>Select files to transfer</button>
     <p id="drop-hint">Place items to share.</p>
     <input id="file-input" type="file" multiple style="display: none">
     <p id="status-text"></p>
@@ -118,14 +167,22 @@
       }
     }
 
-    // The TV QR code opens this upload page. Keep the same PIN when the user
-    // switches to the keyboard service on the other port.
+    // The TV QR code lands directly on transfer. On TV QR sessions, both
+    // transfer and keyboard remain first-level entries and can be switched at
+    // any time without an intermediate chooser page.
     var isTvQr = new URLSearchParams(location.search).get('tv') === '1';
     if (isTvQr) {
       var keyboardHost = location.hostname.indexOf(':') >= 0 ? '[' + location.hostname + ']' : location.hostname;
-      document.getElementById('keyboard-button').style.display = 'flex';
+      var transferPort = location.port || (location.protocol === 'https:' ? '443' : '80');
+      var keyboardQuery = '?transferScheme=' + encodeURIComponent(location.protocol.replace(':', '')) +
+        '&transferPort=' + encodeURIComponent(transferPort) +
+        (pin ? '&pin=' + encodeURIComponent(pin) : '');
+      document.getElementById('transfer-link').style.display = 'inline-block';
+      document.getElementById('transfer-link').href = location.pathname +
+        '?tv=1' + (pin ? '&pin=' + encodeURIComponent(pin) : '');
+      document.getElementById('keyboard-button').style.display = 'inline-block';
       document.getElementById('keyboard-button').href =
-        'http://' + keyboardHost + ':53318/kb' + (pin ? '?pin=' + encodeURIComponent(pin) : '');
+        'http://' + keyboardHost + ':53318/kb' + keyboardQuery;
     }
 
     function makeRequest(url, method, body, callback) {

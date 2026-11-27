@@ -256,15 +256,15 @@ class _TvReceiveQr extends StatefulWidget {
 class _TvReceiveQrState extends State<_TvReceiveQr> {
   static const _transferUrlKey = 'ls_tv_transfer_url';
 
-  String get _url => '${widget.serverState.https ? 'https' : 'http'}://${widget.ip}:${widget.serverState.port}';
-
   String get _urlWithPin {
     final pin = widget.serverState.web?.pin;
-    final tvQuery = 'tv=1';
-    return switch (pin) {
-      String() => '$_url/?$tvQuery&pin=${Uri.encodeQueryComponent(pin)}',
-      null => '$_url/?$tvQuery',
+    final transferScheme = widget.serverState.https ? 'https' : 'http';
+    final query = <String, String>{
+      'transferScheme': transferScheme,
+      'transferPort': widget.serverState.port.toString(),
+      if (pin != null) 'pin': pin,
     };
+    return 'http://${widget.ip}:53318/kb?${Uri(queryParameters: query).query}';
   }
 
   @override
@@ -314,7 +314,7 @@ class _TvReceiveQrState extends State<_TvReceiveQr> {
           ],
         ),
         const SizedBox(height: 10),
-        Text(_url, style: const TextStyle(fontSize: 20), textAlign: TextAlign.center),
+        Text('http://${widget.ip}:53318/kb', style: const TextStyle(fontSize: 20), textAlign: TextAlign.center),
       ],
     );
   }

@@ -200,7 +200,7 @@ class Translations$receiveTab$zh_CN extends Translations$receiveTab$en {
   @override
   String get link => '通过链接接收';
   @override
-  String get qrHint => '手机扫码，即可在浏览器打开发送页面';
+  String get qrHint => '手机扫码，即可直接打开电视键盘输入页面';
 }
 
 // Path: sendTab

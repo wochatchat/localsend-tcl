@@ -284,22 +284,28 @@ class LocalSendImeService : InputMethodService() {
         if (saved != null) {
             val savedUri = Uri.parse(saved)
             val savedPin = savedUri.getQueryParameter("pin")
-            if (savedUri.scheme == scheme &&
-                savedUri.port == port &&
+            if (savedUri.scheme == "http" &&
+                savedUri.port == KEYBOARD_PORT &&
+                savedUri.path == "/kb" &&
                 savedUri.host != null &&
-                savedUri.getQueryParameter("tv") == "1" &&
+                savedUri.getQueryParameter("transferScheme") == scheme &&
+                savedUri.getQueryParameter("transferPort") == port.toString() &&
                 savedPin == configuredPin
             ) {
                 return saved
             }
         }
 
-        val base = "$scheme://${currentIp ?: "0.0.0.0"}:$port"
-        return if (configuredPin != null) {
-            "$base/?tv=1&pin=${Uri.encode(configuredPin)}"
-        } else {
-            "$base/?tv=1"
-        }
+        val host = currentIp ?: "0.0.0.0"
+        val query = Uri.Builder()
+            .appendQueryParameter("transferScheme", scheme)
+            .appendQueryParameter("transferPort", port.toString())
+            .apply {
+                if (configuredPin != null) appendQueryParameter("pin", configuredPin)
+            }
+            .build()
+            .encodedQuery
+        return "http://$host:$KEYBOARD_PORT/kb?$query"
     }
 
     private fun renderQr(content: String) {

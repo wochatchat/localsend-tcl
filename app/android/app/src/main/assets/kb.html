@@ -52,6 +52,16 @@
   }
   .head-row { display: flex; align-items: center; gap: 10px; }
   .head-row h1 { font-size: 17px; margin: 0; font-weight: 600; flex: 1; }
+  .transfer-link {
+    color: var(--on-primary);
+    border: 1px solid rgba(255, 255, 255, .65);
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 12px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .transfer-link:active { opacity: .8; }
   .pill {
     font-size: 12px;
     padding: 4px 10px;
@@ -99,6 +109,7 @@
 <header>
   <div class="head-row">
     <h1>⌨ LocalSend 键盘</h1>
+    <a id="transferLink" class="transfer-link" href="#">传输文件</a>
     <span id="pill" class="pill gray">等待连接</span>
   </div>
   <div class="sub" id="hostLine"></div>
@@ -137,6 +148,13 @@
 
   var ta = document.getElementById('ta');
   var pill = document.getElementById('pill');
+  var transferLink = document.getElementById('transferLink');
+  var transferHost = location.hostname.indexOf(':') >= 0 ? '[' + location.hostname + ']' : location.hostname;
+  var transferScheme = qs.get('transferScheme') || 'http';
+  var transferPort = qs.get('transferPort') || '53317';
+  var transferQuery = '?tv=1' + (pin ? '&pin=' + encodeURIComponent(pin) : '');
+  transferLink.href = transferScheme + '://' + transferHost + ':' + encodeURIComponent(transferPort) + '/' + transferQuery;
+
   var banner = document.getElementById('banner');
   var hint = document.getElementById('hint');
   var sendDraft = document.getElementById('sendDraft');
