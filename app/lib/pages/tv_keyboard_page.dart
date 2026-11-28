@@ -11,6 +11,9 @@ import 'package:localsend_app/provider/network/send_provider.dart';
 import 'package:localsend_app/pages/tv_keyboard_client.dart';
 import 'package:localsend_app/widget/dialogs/message_input_dialog.dart';
 import 'package:localsend_app/widget/dialogs/pin_dialog.dart';
+import 'package:localsend_app/provider/selection/selected_sending_files_provider.dart';
+import 'package:localsend_app/util/native/channel/android_channel.dart' as android_channel;
+import 'package:localsend_app/util/native/cross_file_converters.dart';
 import 'package:localsend_app/widget/responsive_list_view.dart';
 import 'package:localsend_isolates/model/device.dart';
 import 'package:localsend_isolates/model/file_type.dart';
@@ -21,8 +24,6 @@ import 'package:uuid/uuid.dart';
 
 const _keyboardPort = 53318;
 const _uuid = Uuid();
-
-enum _KeyboardMode { realtime, draft }
 
 class TvKeyboardPage extends StatefulWidget {
   final Device? initialDevice;
@@ -40,7 +41,6 @@ class _TvKeyboardPageState extends State<TvKeyboardPage> {
   final _pinPreferences = <String, String>{};
 
   Device? _device;
-  _KeyboardMode _mode = _KeyboardMode.realtime;
   _KeyboardStatus _status = _KeyboardStatus.disconnected;
   String? _statusDetail;
   String _tvText = '';
@@ -167,7 +167,7 @@ class _TvKeyboardPageState extends State<TvKeyboardPage> {
   }
 
   void _onControllerChanged() {
-    if (_applyingSnapshot || _mode != _KeyboardMode.realtime || _status != _KeyboardStatus.connected) return;
+    if (_applyingSnapshot || _status != _KeyboardStatus.connected) return;
     final selection = _controller.selection;
     if (!selection.isValid || (selection.start == _lastSelectionStart && selection.end == _lastSelectionEnd)) return;
     _lastSelectionStart = selection.start;
@@ -185,7 +185,7 @@ class _TvKeyboardPageState extends State<TvKeyboardPage> {
   }
 
   void _onTextChanged(String value) {
-    if (_applyingSnapshot || _mode != _KeyboardMode.realtime) return;
+    if (_applyingSnapshot) return;
     final old = _tvText;
     var prefix = 0;
     while (prefix < old.length && prefix < value.length && old.codeUnitAt(prefix) == value.codeUnitAt(prefix)) {
@@ -238,17 +238,28 @@ class _TvKeyboardPageState extends State<TvKeyboardPage> {
     }
   }
 
-  Future<void> _sendDraft() async {
-    if (_controller.text.isEmpty || _status != _KeyboardStatus.connected) return;
+  Future<void> _transferFiles() async {
+    final device = _device;
+    if (device == null || _status != _KeyboardStatus.connected) return;
+
+    final ref = context.ref;
+    final selectedFiles = ref.redux(selectedSendingFilesProvider);
+    selectedFiles.dispatch(ClearSelectionAction());
     try {
-      await _enqueue(() async {
-        final result = await _client.text({'op': 'replace', 'text': _controller.text});
-        if (result['applied'] == false) throw StateError('draft was not applied');
-        await _sync();
-      });
-      _focusNode.requestFocus();
-    } catch (e) {
-      _setDisconnected(e.toString());
+      final picked = await android_channel.pickFilesAndroid();
+      if (picked == null || picked.isEmpty || !mounted) return;
+      await selectedFiles.dispatchAsync(
+        AddFilesAction(
+          files: picked,
+          converter: CrossFileConverters.convertFileInfo,
+        ),
+      );
+      final files = ref.read(selectedSendingFilesProvider);
+      if (files.isNotEmpty) {
+        await ref.notifier(sendProvider).startSession(target: device, files: files, background: false);
+      }
+    } finally {
+      selectedFiles.dispatch(ClearSelectionAction());
     }
   }
 
@@ -257,7 +268,6 @@ class _TvKeyboardPageState extends State<TvKeyboardPage> {
     try {
       final result = await _client.clipboard();
       final text = result['text']?.toString() ?? '';
-      setState(() => _mode = _KeyboardMode.draft);
       _applyingSnapshot = true;
       _controller.value = TextEditingValue(text: text, selection: TextSelection.collapsed(offset: text.length));
       _applyingSnapshot = false;
@@ -340,13 +350,13 @@ class _TvKeyboardPageState extends State<TvKeyboardPage> {
               child: Text(_statusDetail!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
           const SizedBox(height: 15),
-          SegmentedButton<_KeyboardMode>(
-            segments: [
-              ButtonSegment(value: _KeyboardMode.realtime, label: Text(t.tvKeyboardPage.modeRealtime), icon: const Icon(Icons.bolt)),
-              ButtonSegment(value: _KeyboardMode.draft, label: Text(t.tvKeyboardPage.modeDraft), icon: const Icon(Icons.edit_outlined)),
-            ],
-            selected: {_mode},
-            onSelectionChanged: (selection) => setState(() => _mode = selection.first),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _status == _KeyboardStatus.connected ? _transferFiles : null,
+              icon: const Icon(Icons.upload_file),
+              label: Text(t.tvKeyboardPage.transferFiles),
+            ),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -357,16 +367,9 @@ class _TvKeyboardPageState extends State<TvKeyboardPage> {
             maxLines: null,
             onChanged: _onTextChanged,
             decoration: InputDecoration(
-              helperText: _mode == _KeyboardMode.realtime ? t.tvKeyboardPage.realtimeHint : t.tvKeyboardPage.draftHint,
+              helperText: t.tvKeyboardPage.realtimeHint,
             ),
           ),
-          if (_mode == _KeyboardMode.draft) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(onPressed: _status == _KeyboardStatus.connected ? _sendDraft : null, icon: const Icon(Icons.upload), label: Text(t.tvKeyboardPage.draftSend)),
-            ),
-          ],
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,

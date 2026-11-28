@@ -298,17 +298,11 @@ class Translations$tvKeyboardPage$en {
   /// en: 'Rescan'
   String get rescan => 'Rescan';
 
-  /// en: 'Realtime'
-  String get modeRealtime => 'Realtime';
-
-  /// en: 'Draft'
-  String get modeDraft => 'Draft';
+  /// en: 'Transfer files'
+  String get transferFiles => 'Transfer files';
 
   /// en: 'Sync'
   String get syncNow => 'Sync';
-
-  /// en: 'Send entire draft'
-  String get draftSend => 'Send entire draft';
 
   /// en: 'Send as message'
   String get sendAsMessage => 'Send as message';
@@ -316,15 +310,11 @@ class Translations$tvKeyboardPage$en {
   /// en: 'Help'
   String get help => 'Help';
 
-  /// en: 'Realtime mode sends each edit to the TV. Draft mode lets you edit freely and replaces the TV text when you tap Send entire draft.'
-  String get helpBody =>
-      'Realtime mode sends each edit to the TV. Draft mode lets you edit freely and replaces the TV text when you tap Send entire draft.';
+  /// en: 'Each edit is sent to the TV immediately. If the TV was changed with its remote, tap Sync.'
+  String get helpBody => 'Each edit is sent to the TV immediately. If the TV was changed with its remote, tap Sync.';
 
   /// en: 'Each edit is sent to the TV immediately.'
   String get realtimeHint => 'Each edit is sent to the TV immediately.';
-
-  /// en: 'Edit freely, then replace the TV text with the draft.'
-  String get draftHint => 'Edit freely, then replace the TV text with the draft.';
 
   /// en: 'If the TV was changed with its remote, tap Sync.'
   String get resyncHint => 'If the TV was changed with its remote, tap Sync.';

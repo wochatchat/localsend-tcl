@@ -264,23 +264,17 @@ class Translations$tvKeyboardPage$zh_CN extends Translations$tvKeyboardPage$en {
   @override
   String get rescan => '重新扫描';
   @override
-  String get modeRealtime => '实时输入';
-  @override
-  String get modeDraft => '草稿模式';
+  String get transferFiles => '传输文件';
   @override
   String get syncNow => '同步';
-  @override
-  String get draftSend => '整段上屏';
   @override
   String get sendAsMessage => '以消息发送';
   @override
   String get help => '帮助';
   @override
-  String get helpBody => '实时模式会把每次编辑立即发送到电视。草稿模式可以自由编辑，点击“整段上屏”后替换电视文本。';
+  String get helpBody => '每次编辑都会立即发送到电视。如果电视遥控器改过内容，请点击同步。';
   @override
   String get realtimeHint => '每次编辑都会立即发送到电视。';
-  @override
-  String get draftHint => '自由编辑，然后用草稿替换电视文本。';
   @override
   String get resyncHint => '如果电视遥控器改过内容，请点击同步。';
   @override
