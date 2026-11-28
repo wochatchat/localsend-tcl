@@ -152,8 +152,23 @@
     var BASE_URL = '/api/localsend/v2';
 
     var i18n = {};
-    var searchParams = new URLSearchParams(location.search);
-    var pin = searchParams.get('pin');
+    function getQueryParam(name) {
+      var query = location.search.slice(1).split('&');
+      for (var i = 0; i < query.length; i++) {
+        var separator = query[i].indexOf('=');
+        var key = separator < 0 ? query[i] : query[i].slice(0, separator);
+        if (key === name) {
+          var value = separator < 0 ? '' : query[i].slice(separator + 1);
+          try {
+            return decodeURIComponent(value.replace(/\+/g, ' '));
+          } catch (e) {
+            return value;
+          }
+        }
+      }
+      return null;
+    }
+    var pin = getQueryParam('pin');
     var uploading = false;
     // dragenter/dragleave fire for every nested element, so the drop zone is only left when this reaches zero.
     var dragDepth = 0;
@@ -161,7 +176,7 @@
     // The TV QR code lands directly on transfer. On TV QR sessions, both
     // transfer and keyboard remain first-level entries and can be switched at
     // any time without an intermediate chooser page.
-    var isTvQr = new URLSearchParams(location.search).get('tv') === '1';
+    var isTvQr = getQueryParam('tv') === '1';
     if (isTvQr) {
       var keyboardHost = location.hostname.indexOf(':') >= 0 ? '[' + location.hostname + ']' : location.hostname;
       var transferPort = location.port || (location.protocol === 'https:' ? '443' : '80');

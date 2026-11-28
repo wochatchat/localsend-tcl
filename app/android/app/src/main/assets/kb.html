@@ -130,9 +130,24 @@
 <footer>由电视上的 LocalSend 提供 · 输入内容仅经局域网传输</footer>
 <script>
 (function () {
-  var qs = new URLSearchParams(location.search);
-  var pin = qs.get('pin') || '';
-  var host = qs.get('host') || '';
+  function getQueryParam(name) {
+    var query = location.search.slice(1).split('&');
+    for (var i = 0; i < query.length; i++) {
+      var separator = query[i].indexOf('=');
+      var key = separator < 0 ? query[i] : query[i].slice(0, separator);
+      if (key === name) {
+        var value = separator < 0 ? '' : query[i].slice(separator + 1);
+        try {
+          return decodeURIComponent(value.replace(/\+/g, ' '));
+        } catch (e) {
+          return value;
+        }
+      }
+    }
+    return null;
+  }
+  var pin = getQueryParam('pin') || '';
+  var host = getQueryParam('host') || '';
 
   var ta = document.getElementById('ta');
   var pill = document.getElementById('pill');
